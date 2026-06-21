@@ -27,20 +27,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreScreen(
+
     onBackClick: () -> Unit = {}
 ) {
-    Text(
-        text = "← Back",
-        color = Color.Black,
-        fontSize = 16.sp,
-        modifier = Modifier.clickable { onBackClick() }
-    )
 
-    Spacer(modifier = Modifier.height(16.dp))
+
+    val selectedGenres = remember {
+        mutableStateListOf("METAL", "HIP HOP")
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.White,
@@ -53,7 +55,6 @@ fun GenreScreen(
                     )
                 },
                 navigationIcon = {
-                    // Einfacher Zurück-Button ohne extra Icon-Dependency.
                     TextButton(onClick = onBackClick) {
                         Text(
                             text = "←",
@@ -65,12 +66,14 @@ fun GenreScreen(
             )
         }
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(24.dp)
         ) {
+
             Text(
                 text = "GENRES",
                 color = Color(0xFFB23A3A),
@@ -80,17 +83,16 @@ fun GenreScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            GenreRow("REGGAE", "METAL", "POP")
-            GenreRow("ROCK", "HIP HOP", "INDIE")
-            GenreRow("CLASSICAL", "HOUSE")
-            GenreRow("TECHNO", "AMBIENT")
-            GenreRow("EXPERIMENTAL", "RNB")
-            GenreRow("JAZZ", "SOUL", "POLKA")
-            GenreRow("COUNTRY", "SCHLAGER")
+            GenreRow(selectedGenres, "REGGAE", "METAL", "POP")
+            GenreRow(selectedGenres, "ROCK", "HIP HOP", "INDIE")
+            GenreRow(selectedGenres, "CLASSICAL", "HOUSE")
+            GenreRow(selectedGenres, "TECHNO", "AMBIENT")
+            GenreRow(selectedGenres, "EXPERIMENTAL", "RNB")
+            GenreRow(selectedGenres, "JAZZ", "SOUL", "POLKA")
+            GenreRow(selectedGenres, "COUNTRY", "SCHLAGER")
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Grauer Infoblock unten aus dem Wireframe.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -114,24 +116,35 @@ fun GenreScreen(
 }
 
 @Composable
-fun GenreRow(vararg genres: String) {
-    // Eine Zeile mit mehreren Genre-Wörtern.
+fun GenreRow(
+    selectedGenres: MutableList<String>,
+    vararg genres: String
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         genres.forEach { genre ->
+
+            val isSelected = genre in selectedGenres
+
             Text(
                 text = genre,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (genre == "METAL" || genre == "HIP HOP") {
+                color = if (isSelected) {
                     Color(0xFFB23A3A)
                 } else {
                     Color(0xFF333333)
+                },
+                modifier = Modifier.clickable {
+                    if (isSelected) {
+                        selectedGenres.remove(genre)
+                    } else {
+                        selectedGenres.add(genre)
+                    }
                 }
             )
-
         }
     }
 

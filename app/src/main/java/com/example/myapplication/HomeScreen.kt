@@ -22,61 +22,69 @@ import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Scaffold
 
 
 @Composable
 fun HomeScreen(
     onOpenGenres: () -> Unit = {}
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF4F4F4))
-    ) {
-        // Platzhalter für die Karte
+    Scaffold(
+        topBar = {
+            Column() {
+
+                HomeHeader(onOpenGenres = onOpenGenres)
+            }
+
+        }
+    ) { paddingValues ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 120.dp)
-                .background(Color(0xFFEFEFEF))
-        )
+                .padding(paddingValues)
+                .background(Color(0xFFF4F4F4))
+        ) {
 
-        // Kopfbereich mit Profil und Button
-        HomeHeader(
-            onOpenGenres = onOpenGenres
-        )
+            // Platzhalter für die Karte
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEFEFEF))
+            )
 
-        // Beispiel-Marker auf der Karte
-        MapMarker(
-            title = "Queen",
-            subtitle = "Rock, Pop, Indie",
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = (-20).dp, y = 40.dp)
-        )
+            // Marker
+            MapMarker(
+                title = "Queen",
+                subtitle = "Rock, Pop, Indie",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = (-20).dp, y = 40.dp)
+            )
 
-        MapMarker(
-            title = "6ix9ine",
-            subtitle = "Hip-Hop, Trap",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 190.dp, end = 36.dp)
-        )
+            MapMarker(
+                title = "6ix9ine",
+                subtitle = "Hip-Hop, Trap",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 190.dp, end = 36.dp)
+            )
 
-        // Schwarzer Punkt als aktueller Standort
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = 45.dp, y = 130.dp)
-                .size(18.dp)
-                .clip(CircleShape)
-                .background(Color.Black)
-        )
+            // Standort
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = 45.dp, y = 130.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+            )
 
-        // Musikplayer unten
-        MusicPlayer(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+            // MusicPlayer liegt ÜBER der Karte
+            MusicPlayer(
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
     }
 }
 

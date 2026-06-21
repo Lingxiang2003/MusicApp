@@ -26,18 +26,23 @@ fun LoginScreen(
 
     val loginEnabled = username.isNotBlank() && password.isNotBlank()
 
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(90.dp)
+            .background(Color(0xFFF2F2F2))
+    )
+    {StatusBar()
+
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(24.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(90.dp)
-                .background(Color(0xFFF2F2F2))
-        )
+
 
         Spacer(modifier = Modifier.height(36.dp))
 
@@ -125,7 +130,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            RegisterButton("Apple")
+            RegisterButton("E-Mail")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
