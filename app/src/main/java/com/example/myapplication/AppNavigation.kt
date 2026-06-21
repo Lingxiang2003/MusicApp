@@ -5,6 +5,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.myapplication.Genre.GenreScreen
+import com.example.myapplication.Home.HomeScreen
+import com.example.myapplication.Login.LoginScreen
 
 // Hier werden die Namen / Routen der Screens gespeichert
 sealed class AppRoute(val route: String) {

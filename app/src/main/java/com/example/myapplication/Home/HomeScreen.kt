@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.Home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,26 +16,27 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.collectAsState
+import com.example.myapplication.viewmodel.HomeViewModel
 
 
 @Composable
 fun HomeScreen(
-    onOpenGenres: () -> Unit = {}
+    onOpenGenres: () -> Unit = {},
+    viewModel: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+
+    val uiState by viewModel.uiState.collectAsState()
+
     Scaffold(
         topBar = {
-            Column() {
-
-                HomeHeader(onOpenGenres = onOpenGenres)
-            }
-
+            HomeHeader(
+                onOpenGenres = onOpenGenres
+            )
         }
     ) { paddingValues ->
 
@@ -46,14 +47,12 @@ fun HomeScreen(
                 .background(Color(0xFFF4F4F4))
         ) {
 
-            // Platzhalter für die Karte
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFFEFEFEF))
             )
 
-            // Marker
             MapMarker(
                 title = "Queen",
                 subtitle = "Rock, Pop, Indie",
@@ -70,7 +69,6 @@ fun HomeScreen(
                     .padding(top = 190.dp, end = 36.dp)
             )
 
-            // Standort
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -80,8 +78,17 @@ fun HomeScreen(
                     .background(Color.Black)
             )
 
-            // MusicPlayer liegt ÜBER der Karte
             MusicPlayer(
+                isPlaying = uiState.isPlaying,
+                expanded = uiState.expanded,
+                currentSong = uiState.currentSong,
+                queue = uiState.queue,
+                onPlayPause = {
+                    viewModel.togglePlayback()
+                },
+                onExpand = {
+                    viewModel.toggleQueue()
+                },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
@@ -183,20 +190,14 @@ fun MapMarker(
 
 @Composable
 fun MusicPlayer(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPlaying: Boolean,
+    expanded: Boolean,
+    currentSong: Song,
+    queue: List<Song>,
+    onPlayPause: () -> Unit,
+    onExpand: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(true) }
-
-    val queue = listOf(
-        "Maiglöckchen blühen",
-        "Zartmann Party",
-        "Pöbeln am Gaunerplatz",
-        "Love is in the Air",
-        "Shababs Botten",
-        "Kirkstein in D major",
-        "Frankenstein's Theme"
-    )
 
     Box(
         modifier = modifier
@@ -227,7 +228,7 @@ fun MusicPlayer(
                 ) {
                     items(queue) { song ->
                         Text(
-                            text = song,
+                            text = song.title,
                             color = Color.White,
                             fontSize = 16.sp,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -238,20 +239,6 @@ fun MusicPlayer(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Text(
-                text = "Kirkstein in D major",
-                color = Color.Gray,
-                fontSize = 12.sp
-            )
-
-            Text(
-                text = "Frankenstein's Theme",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "Currently playing...",
@@ -260,9 +247,15 @@ fun MusicPlayer(
             )
 
             Text(
-                text = "DOOMSDAY PT. 2 (feat. MockUp Marius)",
+                text = currentSong.artist,
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+
+            Text(
+                text = currentSong.title,
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
 
@@ -286,7 +279,7 @@ fun MusicPlayer(
                     color = Color(0xFFC93434),
                     fontSize = if (isPlaying) 30.sp else 34.sp,
                     modifier = Modifier.clickable {
-                        isPlaying = !isPlaying
+                        onPlayPause()
                     }
                 )
 
@@ -297,7 +290,7 @@ fun MusicPlayer(
                     color = Color.White,
                     fontSize = 26.sp,
                     modifier = Modifier.clickable {
-                        expanded = !expanded
+                        onExpand()
                     }
                 )
             }

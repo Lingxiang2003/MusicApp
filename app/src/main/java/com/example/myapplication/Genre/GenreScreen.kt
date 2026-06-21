@@ -1,6 +1,7 @@
-package com.example.myapplication
+package com.example.myapplication.Genre
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,22 +27,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.lifecycle.ViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreScreen(
-
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    viewModel: GenreViewModel = viewModel()
 ) {
 
-
-    val selectedGenres = remember {
-        mutableStateListOf("METAL", "HIP HOP")
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -83,13 +80,47 @@ fun GenreScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            GenreRow(selectedGenres, "REGGAE", "METAL", "POP")
-            GenreRow(selectedGenres, "ROCK", "HIP HOP", "INDIE")
-            GenreRow(selectedGenres, "CLASSICAL", "HOUSE")
-            GenreRow(selectedGenres, "TECHNO", "AMBIENT")
-            GenreRow(selectedGenres, "EXPERIMENTAL", "RNB")
-            GenreRow(selectedGenres, "JAZZ", "SOUL", "POLKA")
-            GenreRow(selectedGenres, "COUNTRY", "SCHLAGER")
+            GenreRow(
+                "REGGAE", "METAL", "POP",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "ROCK", "HIP HOP", "INDIE",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "CLASSICAL", "HOUSE",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "TECHNO", "AMBIENT",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "EXPERIMENTAL", "RNB",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "JAZZ", "SOUL", "POLKA",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
+
+            GenreRow(
+                "COUNTRY", "SCHLAGER",
+                selectedGenres = uiState.selectedGenres,
+                onGenreClick = viewModel::toggleGenre
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -117,13 +148,15 @@ fun GenreScreen(
 
 @Composable
 fun GenreRow(
-    selectedGenres: MutableList<String>,
-    vararg genres: String
+    vararg genres: String,
+    selectedGenres: List<String>,
+    onGenreClick: (String) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+
         genres.forEach { genre ->
 
             val isSelected = genre in selectedGenres
@@ -138,11 +171,7 @@ fun GenreRow(
                     Color(0xFF333333)
                 },
                 modifier = Modifier.clickable {
-                    if (isSelected) {
-                        selectedGenres.remove(genre)
-                    } else {
-                        selectedGenres.add(genre)
-                    }
+                    onGenreClick(genre)
                 }
             )
         }

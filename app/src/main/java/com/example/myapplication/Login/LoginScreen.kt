@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.Login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,15 +16,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.Genre.GenreViewModel
+import com.example.myapplication.StatusBar
 
 @Composable
 fun LoginScreen(
-    onLoginClick: () -> Unit = {}
-) {
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    onLoginClick: () -> Unit = {},
+    viewModel: LoginViewModel = viewModel()
 
-    val loginEnabled = username.isNotBlank() && password.isNotBlank()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Box(
         modifier = Modifier
@@ -32,7 +34,8 @@ fun LoginScreen(
             .height(90.dp)
             .background(Color(0xFFF2F2F2))
     )
-    {StatusBar()
+    {
+        StatusBar()
 
     }
 
@@ -72,24 +75,23 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         LoginInputBox(
-            value = username,
-            onValueChange = { username = it },
+            value = uiState.username,
+            onValueChange = viewModel::updateUsername,
             label = "Username"
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         LoginPasswordBox(
-            value = password,
-            onValueChange = { password = it },
+            value = uiState.password,
+            onValueChange = viewModel::updatePassword,
             label = "Password"
         )
-
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = onLoginClick,
-            enabled = loginEnabled,
+            enabled = uiState.loginEnabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFC93434)
             ),
