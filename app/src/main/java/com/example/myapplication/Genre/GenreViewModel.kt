@@ -1,33 +1,60 @@
 package com.example.myapplication.Genre
 
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-class GenreViewModel : ViewModel() {
+class GenreViewModel(
+    private val preferences: UserPreferences
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        GenreUiState()
-    )
+    private val _uiState =
+        MutableStateFlow(GenreUiState())
 
     val uiState = _uiState.asStateFlow()
 
-    fun toggleGenre(genre: String) {
+    init {
 
-        val currentGenres = _uiState.value.selectedGenres
+        viewModelScope.launch {
 
-        if (genre in currentGenres) {
+            preferences.selectedGenres.collect { genres ->
 
-            _uiState.value = _uiState.value.copy(
-                selectedGenres = currentGenres - genre
+                _uiState.value =
+                    _uiState.value.copy(
+                        selectedGenres = genres
+                    )
+            }
+        }
+    }
+
+    fun toggleGenre(
+        genre: String
+    ) {
+
+        val currentGenres =
+            _uiState.value.selectedGenres
+
+        val newGenres =
+            if (genre in currentGenres) {
+
+                currentGenres - genre
+
+            } else {
+
+                currentGenres + genre
+            }
+
+        _uiState.value =
+            _uiState.value.copy(
+                selectedGenres = newGenres
             )
 
-        } else {
+        viewModelScope.launch {
 
-            _uiState.value = _uiState.value.copy(
-                selectedGenres = currentGenres + genre
-            )
+            preferences.saveGenres(newGenres)
         }
     }
 }

@@ -29,14 +29,23 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.data.UserPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreScreen(
-    onBackClick: () -> Unit = {},
-    viewModel: GenreViewModel = viewModel()
+    onBackClick: () -> Unit = {}
 ) {
+
+    val context = LocalContext.current
+
+    val viewModel: GenreViewModel = viewModel(
+        factory = GenreViewModelFactory(
+            UserPreferences(context)
+        )
+    )
 
     val uiState by viewModel.uiState.collectAsState()
 
