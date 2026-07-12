@@ -1,5 +1,6 @@
 package com.example.myapplication.Home
 
+import android.annotation.SuppressLint
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -7,6 +8,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Looper
 import android.graphics.Color as AndroidColor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.myapplication.viewmodel.HomeViewModel
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -142,28 +149,139 @@ fun HomeMap(
     hasLocationPermission: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val startPosition = LatLng(50.9375, 6.9603)
+    val startPosition = LatLng(51.1657, 10.4515)
+    val deviceLocation = rememberDeviceLocation(hasLocationPermission)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(startPosition, 13f)
+        position = CameraPosition.fromLatLngZoom(startPosition, 5f)
     }
 
-    GoogleMap(
-        modifier = modifier,
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(
-            isMyLocationEnabled = hasLocationPermission,
-            mapStyleOptions = MapStyleOptions(LIGHT_MAP_STYLE)
-        ),
-        uiSettings = MapUiSettings(
-            compassEnabled = false,
-            mapToolbarEnabled = false,
-            myLocationButtonEnabled = hasLocationPermission,
-            zoomControlsEnabled = true
-        )
-    ) {
-        musicSpots.forEach { spot ->
-            MusicSpotMarker(spot = spot)
+    // Wenn der GPS-Sensor eine Position liefert, bewegt sich die Karte dorthin.
+    LaunchedEffect(deviceLocation) {
+        deviceLocation?.let { position ->
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newLatLngZoom(position, 15f),
+                durationMs = 800
+            )
         }
+    }
+
+    Box(modifier = modifier) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(
+                isMyLocationEnabled = hasLocationPermission,
+                mapStyleOptions = MapStyleOptions(LIGHT_MAP_STYLE)
+            ),
+            uiSettings = MapUiSettings(
+                compassEnabled = false,
+                mapToolbarEnabled = false,
+                myLocationButtonEnabled = hasLocationPermission,
+                zoomControlsEnabled = true
+            )
+        ) {
+            deviceLocation?.let { location ->
+                CurrentLocationMarker(position = location)
+            }
+
+            musicSpots.forEach { spot ->
+                MusicSpotMarker(spot = spot)
+            }
+        }
+
+        LocationStatus(deviceLocation = deviceLocation)
+    }
+}
+
+@Composable
+fun CurrentLocationMarker(position: LatLng) {
+    val markerState = remember(position) {
+        MarkerState(position = position)
+    }
+
+    Marker(
+        state = markerState,
+        title = "Du bist hier",
+        snippet = "Aktuelle GPS-Position",
+        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+        zIndex = 20f
+    )
+}
+
+@Composable
+fun LocationStatus(deviceLocation: LatLng?) {
+    val statusText = if (deviceLocation == null) {
+        "Warte auf GPS-Signal"
+    } else {
+        String.format(
+            java.util.Locale.US,
+            "GPS aktiv: %.5f, %.5f",
+            deviceLocation.latitude,
+            deviceLocation.longitude
+        )
+    }
+
+    // Kleine Anzeige fuer die Vorfuehrung: man sieht, ob der Sensor Daten liefert.
+    Text(
+        text = statusText,
+        color = Color.White,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .padding(12.dp)
+            .background(Color(0xCC111111), RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+    )
+}
+
+@SuppressLint("MissingPermission")
+@Composable
+fun rememberDeviceLocation(hasLocationPermission: Boolean): LatLng? {
+    val context = LocalContext.current
+    var deviceLocation by remember { mutableStateOf<LatLng?>(null) }
+
+    DisposableEffect(hasLocationPermission) {
+        if (!hasLocationPermission) {
+            return@DisposableEffect onDispose {}
+        }
+
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                deviceLocation = LatLng(location.latitude, location.longitude)
+            }
+        }
+
+        val bestLocationProvider = locationManager.findBestLocationProvider()
+
+        // Wie in der Vorlesung: LocationManager + LocationListener + requestLocationUpdates.
+        val minTime = 1000L
+        val minDistance = 0f
+
+        if (bestLocationProvider != null) {
+            locationManager.requestLocationUpdates(
+                bestLocationProvider,
+                minTime,
+                minDistance,
+                listener,
+                Looper.getMainLooper()
+            )
+        }
+
+        onDispose {
+            locationManager.removeUpdates(listener)
+        }
+    }
+
+    return deviceLocation
+}
+
+fun LocationManager.findBestLocationProvider(): String? {
+    return listOf(
+        LocationManager.GPS_PROVIDER,
+        LocationManager.NETWORK_PROVIDER
+    ).firstOrNull { provider ->
+        isProviderEnabled(provider)
     }
 }
 
@@ -172,9 +290,12 @@ fun MusicSpotMarker(spot: MusicSpot) {
     val markerIcon = remember(spot.title) {
         createMusicSpotIcon(spot)
     }
+    val markerState = remember(spot.position) {
+        MarkerState(position = spot.position)
+    }
 
     Marker(
-        state = MarkerState(position = spot.position),
+        state = markerState,
         title = spot.title,
         snippet = spot.genres,
         icon = markerIcon,
