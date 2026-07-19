@@ -35,6 +35,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.myapplication.viewmodel.HomeViewModel
+import com.example.myapplication.communication.MusicRecommendation
+import com.example.myapplication.Recommendations.RecommendationMessage
+import com.example.myapplication.Waypoints.Waypoint
+import com.example.myapplication.Waypoints.WaypointRepository
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -71,13 +77,43 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @Composable
 fun HomeScreen(
     onOpenGenres: () -> Unit = {},
+    onOpenRecommendations: () -> Unit = {},
+    onOpenWaypoints: () -> Unit = {},
+    username: String = "WilliWillsWissen",
+    receivedRecommendation: MusicRecommendation? = null,
+    onRecommendationConsumed: (MusicRecommendation) -> Unit = {},
     viewModel: HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val hasLocationPermission = rememberLocationPermission()
+    val context = LocalContext.current
+    val waypointRepository = remember(context) { WaypointRepository(context) }
+    val savedWaypoints by WaypointRepository.sharedWaypoints.collectAsState()
+
+    LaunchedEffect(receivedRecommendation) {
+        receivedRecommendation?.let {
+            viewModel.receiveRecommendation(it.toSong())
+            onRecommendationConsumed(it)
+        }
+    }
+
+    LaunchedEffect(username) {
+        viewModel.startRecommendationUpdates(username)
+    }
+
+    LaunchedEffect(Unit) {
+        runCatching { waypointRepository.refreshShared() }
+    }
 
     Scaffold(
-        topBar = { HomeHeader(onOpenGenres = onOpenGenres) },
+        topBar = {
+            HomeHeader(
+                username = username,
+                onOpenGenres = onOpenGenres,
+                onOpenRecommendations = onOpenRecommendations,
+                onOpenWaypoints = onOpenWaypoints
+            )
+        },
         bottomBar = {
             MusicPlayer(
                 isPlaying = uiState.isPlaying,
@@ -89,17 +125,129 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        HomeMap(
-            hasLocationPermission = hasLocationPermission,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+        ) {
+            HomeMap(
+                hasLocationPermission = hasLocationPermission,
+                waypoints = savedWaypoints,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            uiState.receivedSong?.let { song ->
+                ReceivedRecommendationCard(
+                    song = song,
+                    onDismiss = viewModel::dismissReceivedRecommendation,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(12.dp)
+                )
+            }
+        }
+    }
+
+    uiState.incomingRecommendation?.let { message ->
+        IncomingRecommendationDialog(
+            message = message,
+            onDismiss = viewModel::dismissIncomingRecommendation,
+            onListen = viewModel::playIncomingRecommendation
         )
     }
 }
 
 @Composable
-fun HomeHeader(onOpenGenres: () -> Unit = {}) {
+fun IncomingRecommendationDialog(
+    message: RecommendationMessage,
+    onDismiss: () -> Unit,
+    onListen: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Text(
+                text = "Neuer Musik-Tipp",
+                color = Color(0xFFC93434),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text("${message.sender} empfiehlt dir:", color = Color.DarkGray)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = message.title,
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Text(message.artist, fontSize = 17.sp, color = Color.Gray)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Später") }
+        },
+        confirmButton = {
+            TextButton(onClick = onListen) {
+                Text("Anhören", color = Color(0xFFC93434), fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+fun ReceivedRecommendationCard(
+    song: Song,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color(0xEE111111), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Musik-Tipp erhalten",
+                color = Color(0xFFC93434),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "${song.title} - ${song.artist}",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Zur Warteschlange hinzugefügt",
+                color = Color.LightGray,
+                fontSize = 12.sp
+            )
+        }
+        Text(
+            text = "OK",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clickable(onClick = onDismiss)
+                .padding(10.dp)
+        )
+    }
+}
+
+@Composable
+fun HomeHeader(
+    username: String = "WilliWillsWissen",
+    onOpenGenres: () -> Unit = {},
+    onOpenRecommendations: () -> Unit = {},
+    onOpenWaypoints: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,7 +267,7 @@ fun HomeHeader(onOpenGenres: () -> Unit = {}) {
 
         Column {
             Text(
-                text = "WilliWillsWissen",
+                text = username,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -133,13 +281,34 @@ fun HomeHeader(onOpenGenres: () -> Unit = {}) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Der Pfeil führt zur Genre-Auswahl.
         Text(
-            text = "->",
-            fontSize = 30.sp,
+            text = "Tipps",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFC93434),
+            modifier = Modifier
+                .clickable(onClick = onOpenRecommendations)
+                .padding(8.dp)
+        )
+
+        Text(
+            text = "Waypoint",
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black,
-            modifier = Modifier.clickable(onClick = onOpenGenres)
+            modifier = Modifier
+                .clickable(onClick = onOpenWaypoints)
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+        )
+
+        Text(
+            text = "→",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            modifier = Modifier
+                .clickable(onClick = onOpenGenres)
+                .padding(start = 4.dp)
         )
     }
 }
@@ -147,6 +316,7 @@ fun HomeHeader(onOpenGenres: () -> Unit = {}) {
 @Composable
 fun HomeMap(
     hasLocationPermission: Boolean,
+    waypoints: List<Waypoint> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val startPosition = LatLng(51.1657, 10.4515)
@@ -187,10 +357,29 @@ fun HomeMap(
             musicSpots.forEach { spot ->
                 MusicSpotMarker(spot = spot)
             }
+
+            waypoints.forEach { waypoint ->
+                WaypointMarker(waypoint)
+            }
         }
 
         LocationStatus(deviceLocation = deviceLocation)
     }
+}
+
+@Composable
+fun WaypointMarker(waypoint: Waypoint) {
+    Marker(
+        state = MarkerState(LatLng(waypoint.latitude, waypoint.longitude)),
+        title = waypoint.name,
+        snippet = buildString {
+            append("Von ${waypoint.owner}")
+            append(" · ${waypoint.songTitle} - ${waypoint.songArtist}")
+            if (waypoint.description.isNotBlank()) append(" · ${waypoint.description}")
+        },
+        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN),
+        zIndex = 15f
+    )
 }
 
 @Composable
@@ -479,7 +668,7 @@ fun PlayerButton(
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+            .padding(horizontal = 11.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

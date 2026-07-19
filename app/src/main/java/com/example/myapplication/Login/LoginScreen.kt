@@ -22,7 +22,7 @@ import com.example.myapplication.StatusBar
 
 @Composable
 fun LoginScreen(
-    onLoginClick: () -> Unit = {},
+    onLoginClick: (String) -> Unit = {},
     viewModel: LoginViewModel = viewModel()
 
 ) {
@@ -90,7 +90,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
-            onClick = onLoginClick,
+            onClick = { onLoginClick(uiState.username.trim()) },
             enabled = uiState.loginEnabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFC93434)
